@@ -1,38 +1,70 @@
 ﻿using Ecommerce.Application.Repositories;
+using Ecommerce.Application.ViewModels.Products;
+using Ecommerce.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
-namespace Ecommerce.API.Controllers
+namespace ETicaretAPI.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly IProductWriteRepository _productWriteRepository;
-        private readonly IProductReadRepository _productReadRepository;
+        readonly private IProductWriteRepository _productWriteRepository;
+        readonly private IProductReadRepository _productReadRepository;
 
-        public ProductsController(IProductWriteRepository productWriteRepository, IProductReadRepository productReadRepository)
+        public ProductsController(
+            IProductWriteRepository productWriteRepository,
+            IProductReadRepository productReadRepository)
         {
             _productWriteRepository = productWriteRepository;
             _productReadRepository = productReadRepository;
         }
+
         [HttpGet]
-        public async Task Get()
+        public async Task<IActionResult> Get()
         {
-            await _productWriteRepository.AddRangeAsync(new()
+            return Ok(_productReadRepository.GetAll(false));
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(string id)
+        {
+            return Ok(await _productReadRepository.GetByIdAsync(id, false));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Post(VM_Create_Product model)
+        {
+            await _productWriteRepository.AddAsync(new()
             {
-                new() { Id = Guid.NewGuid(), Name = "Product 1", Price = 100, Stock = 100, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 2", Price = 200, Stock = 200, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 3", Price = 300, Stock = 300, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 4", Price = 400, Stock = 400, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 5", Price = 500, Stock = 500, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 6", Price = 600, Stock = 600, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 7", Price = 700, Stock = 700, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 8", Price = 800, Stock = 800, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 9", Price = 900, Stock = 900, CreatedDate = DateTime.UtcNow },
-                new() { Id = Guid.NewGuid(), Name = "Product 10", Price = 1000, Stock = 1000, CreatedDate = DateTime.UtcNow },
+                Name = model.Name,
+                Price = model.Price,
+                Stock = model.Stock
             });
             await _productWriteRepository.SaveAsync();
+            return StatusCode((int)HttpStatusCode.Created);
         }
+
+        [HttpPut]
+        public async Task<IActionResult> Put(VM_Update_Product model)
+        {
+            Product product = await _productReadRepository.GetByIdAsync(model.Id);
+            product.Stock = model.Stock;
+            product.Name = model.Name;
+            product.Price = model.Price;
+            await _productWriteRepository.SaveAsync();
+            return Ok();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            await _productWriteRepository.RemoveAsync(id);
+            await _productWriteRepository.SaveAsync();
+            return Ok();
+        }
+
     }
 }
